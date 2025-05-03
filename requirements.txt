@@ -9,11 +9,13 @@ daphne==4.1.2
 Django==5.2
 django-extensions==4.1
 et_xmlfile==2.0.0
+gunicorn==23.0.0
 hyperlink==21.0.0
 idna==3.10
 incremental==24.7.2
 numpy==2.2.5
 openpyxl==3.1.5
+packaging==25.0
 pandas==2.2.3
 pillow==11.2.1
 pyasn1==0.6.1
