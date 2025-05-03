@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}تعديل بيانات الطبيب{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">تعديل الطبيب: {{ doctor.name }}</h2>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label for="name" class="form-label">اسم الطبيب</label>
+      <input type="text" class="form-control" id="name" name="name" value="{{ doctor.name }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="specialty" class="form-label">التخصص</label>
+      <input type="text" class="form-control" id="specialty" name="specialty" value="{{ doctor.specialty }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="preferred_clinics" class="form-label">العيادات المفضلة</label>
+      <input type="text" class="form-control" id="preferred_clinics" name="preferred_clinics" value="{{ doctor.preferred_clinics|join:', ' }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="preferred_days" class="form-label">الأيام المفضلة</label>
+      <input type="text" class="form-control" id="preferred_days" name="preferred_days" value="{{ doctor.preferred_days|join:', ' }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="unavailable_days" class="form-label">الأيام غير المتاحة</label>
+      <input type="text" class="form-control" id="unavailable_days" name="unavailable_days" value="{{ doctor.unavailable_days|join:', ' }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="shift_preference" class="form-label">تفضيلات المناوبة</label>
+      <input type="text" class="form-control" id="shift_preference" name="shift_preference" value="{{ doctor.shift_preference|join:', ' }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="max_sessions" class="form-label">الحد الأقصى للجلسات</label>
+      <input type="number" class="form-control" id="max_sessions" name="max_sessions" value="{{ doctor.max_sessions }}" required>
+    </div>
+
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" name="has_training" id="has_training" {% if doctor.has_training %}checked{% endif %}>
+      <label class="form-check-label" for="has_training">مدرب؟</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">تحديث</button>
+    <a href="{% url 'doctors_list' %}" class="btn btn-secondary">إلغاء</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}قائمة الحضور والغياب{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">سجل الحضور والغياب</h2>
+  <a href="{% url 'add_attendance' %}" class="btn btn-success mb-3">إضافة سجل جديد</a>
+
+  <table class="table table-bordered text-center">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>اسم الطبيب</th>
+        <th>التاريخ</th>
+        <th>الحالة</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in attendance_records %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ record.doctor.name }}</td>
+        <td>{{ record.date }}</td>
+        <td>
+          {% if record.is_present %}
+            <span class="text-success fw-bold">✔ حاضر</span>
+          {% else %}
+            <span class="text-danger fw-bold">❌ غائب</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">لا يوجد سجلات حضور حالياً.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

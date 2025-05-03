@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}جدول المناوبات - الأسبوع القادم{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="text-center mb-4 fw-bold" id="page-title">جدول المناوبات - الأسبوع القادم</h2>
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <form method="POST" action="{% url 'generate_schedule' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success me-2" id="generate-btn">🔁 توليد الجدول تلقائيًا</button>
+      </form>
+      <form method="POST" action="{% url 'move_week' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger me-2" id="move-btn">📤 نقل الأسبوع الحالي</button>
+      </form>
+    </div>
+
+    <div class="d-flex">
+      <button id="edit-toggle" class="btn btn-warning me-2">✏️ تعديل الجدول</button>
+      <a href="{% url 'export_next_schedule' %}" class="btn btn-primary me-2" id="excel-btn">⬇️ تحميل كـ Excel</a>
+      <button id="toggle-language" class="btn btn-secondary">🌐 English / عربي</button>
+    </div>
+  </div>
+
+  {% if week_start_date %}
+    <p id="week-start">بداية الأسبوع: {{ week_start_date }}</p>
+
+    <form method="POST" action="{% url 'save_schedule_changes' %}">
+      {% csrf_token %}
+      <input type="hidden" name="week_start_date" value="{{ week_start_date|date:'Y-m-d' }}">
+
+      <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle" id="schedule-table">
+          <thead class="table-dark">
+            <tr id="table-head">
+              <th>اليوم</th>
+              <th>الفترة</th>
+              {% for col in columns %}
+                {% if "نهاري" in col %}
+                  <th>{{ col }}</th>
+                {% endif %}
+              {% endfor %}
+              {% for col in columns %}
+                {% if "مسائي" in col %}
+                  <th>{{ col }}</th>
+                {% endif %}
+              {% endfor %}
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for day in days %}
+              {% for period in "الأولى,الثانية"|split:"," %}
+                <tr>
+                  {% if forloop.first %}
+                    <td class="fw-bold align-middle" rowspan="2">{{ day }}</td>
+                  {% endif %}
+                  <td class="fw-bold">{{ period }}</td>
+
+                  {% for col in columns %}
+                    {% if "نهاري" in col %}
+                      <td>{{ schedule_map|get_item:day|get_item:col|get_item:period|safe|default:"—" }}</td>
+                    {% endif %}
+                  {% endfor %}
+                  {% for col in columns %}
+                    {% if "مسائي" in col %}
+                      <td>{{ schedule_map|get_item:day|get_item:col|get_item:period|safe|default:"—" }}</td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="text-center mt-3">
+        <button type="submit" class="btn btn-primary" id="save-btn">💾 حفظ التعديلات</button>
+      </div>
+    </form>
+
+    <h3 class="text-center mt-5 mb-4 fw-bold" id="sessions-title">عدد الجلسات لكل طبيب</h3>
+    <div class="table-responsive">
+      <table class="table table-bordered text-center align-middle">
+        <thead class="table-dark">
+          <tr id="session-head">
+            <th>اسم الطبيب</th>
+            <th>عدد الجلسات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doctor_name, session_count in doctor_sessions.items %}
+            <tr>
+              <td>{{ doctor_name }}</td>
+              <td>{{ session_count }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="2">لا يوجد أطباء لديهم جلسات هذا الأسبوع</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-center">لا يوجد جدول للأسبوع القادم.</p>
+  {% endif %}
+</div>
+
+<style>
+  .doctor-role {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+  .رئيس_القسم { background-color: #444; color: white; }
+  .نائب_رئيس_القسم { background-color: #007bff; color: white; }
+  .أخصائي_أول { background-color: #6a1b9a; color: white; }
+  .استشاري { background-color: #dc3545; color: white; }
+  .أخصائي_نساء { background-color: #f7c6d4; color: black; }
+  .أخصائي_رجال { background-color: #28a745; color: white; }
+  .طبيب_مقيم { background-color: #17a2b8; color: white; }
+  .طبيب_متدرب { background-color: #cfa4ff; color: black; }
+</style>
+
+<script>
+  const doctorList = {{ all_doctors|safe }};
+  let isEnglish = false;
+
+  document.getElementById("edit-toggle").addEventListener("click", () => {
+    let currentDay = null;
+    document.querySelectorAll("#schedule-table tbody tr").forEach((row) => {
+      const cells = row.querySelectorAll("td");
+      const firstCellText = cells[0]?.innerText?.trim();
+      const secondCellText = cells[1]?.innerText?.trim();
+
+      if (cells.length > {{ columns|length }} + 1) {
+        currentDay = firstCellText;
+        var period = secondCellText;
+        var startIndex = 2;
+      } else {
+        var period = firstCellText;
+        var startIndex = 1;
+      }
+
+      row.querySelectorAll(`td:nth-child(n+${startIndex + 1})`).forEach((cell, colIndex) => {
+        const currentText = cell.innerText.trim();
+        const header = document.querySelector(`#schedule-table thead tr th:nth-child(${colIndex + startIndex + 1})`);
+        const clinicShift = header?.innerText?.trim();
+
+        if (currentDay && period && clinicShift) {
+          const select = document.createElement("select");
+          select.classList.add("form-select", "form-select-sm");
+          select.name = `assignment__${currentDay}__${clinicShift}__${period}`;
+
+          const defaultOption = document.createElement("option");
+          defaultOption.value = "";
+          defaultOption.text = "اختر طبيبًا";
+          select.appendChild(defaultOption);
+
+          doctorList.forEach((doc) => {
+            const option = document.createElement("option");
+            option.value = doc;
+            option.text = doc;
+            if (doc === currentText) option.selected = true;
+            select.appendChild(option);
+          });
+
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.textContent = "🗑️";
+          removeBtn.classList.add("btn", "btn-sm", "btn-danger", "ms-2");
+          removeBtn.onclick = () => {
+            select.value = "";
+          };
+
+          cell.innerHTML = "";
+          cell.appendChild(select);
+          cell.appendChild(removeBtn);
+        }
+      });
+    });
+  });
+
+  const dayMap = {
+    "الأحد": "Sunday", "الاثنين": "Monday", "الثلاثاء": "Tuesday", "الأربعاء": "Wednesday", "الخميس": "Thursday",
+    "Sunday": "الأحد", "Monday": "الاثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", "Thursday": "الخميس"
+  };
+
+  const periodMap = {
+    "الأولى": "First", "الثانية": "Second",
+    "First": "الأولى", "Second": "الثانية"
+  };
+
+  const shiftMap = {
+    "نهاري": "Morning", "مسائي": "Evening",
+    "Morning": "نهاري", "Evening": "مسائي"
+  };
+
+  document.getElementById("toggle-language").addEventListener("click", () => {
+    isEnglish = !isEnglish;
+
+    const tableWrapper = document.querySelector(".table-responsive");
+    if (tableWrapper) {
+      tableWrapper.setAttribute("dir", isEnglish ? "ltr" : "rtl");
+    }
+
+    document.querySelectorAll("#schedule-table thead th").forEach((th, index) => {
+      let text = th.innerText.trim();
+      if (index === 0) {
+        th.innerText = isEnglish ? "Day" : "اليوم";
+      } else if (index === 1) {
+        th.innerText = isEnglish ? "Period" : "الفترة";
+      } else {
+        Object.keys(shiftMap).forEach(key => {
+          if (text.includes(key)) {
+            th.innerText = text.replace(key, shiftMap[key]);
+          }
+        });
+      }
+    });
+
+    document.querySelectorAll("#schedule-table tbody td").forEach(cell => {
+      const text = cell.innerText.trim();
+      if (dayMap[text]) {
+        cell.innerText = isEnglish ? dayMap[text] : Object.keys(dayMap).find(key => dayMap[key] === text) || text;
+      } else if (periodMap[text]) {
+        cell.innerText = isEnglish ? periodMap[text] : Object.keys(periodMap).find(key => periodMap[key] === text) || text;
+      }
+    });
+
+    const pageTitle = document.getElementById("page-title");
+    if (pageTitle) {
+      pageTitle.innerText = isEnglish ? "Schedule - Next Week" : "جدول المناوبات - الأسبوع القادم";
+    }
+
+    const weekStart = document.getElementById("week-start");
+    if (weekStart) {
+      weekStart.innerText = (isEnglish ? "Week Start: " : "بداية الأسبوع: ") + "{{ week_start_date }}";
+    }
+
+    const sessionHeadCells = document.querySelectorAll("#session-head th");
+    if (sessionHeadCells.length >= 2) {
+      sessionHeadCells[0].innerText = isEnglish ? "Doctor Name" : "اسم الطبيب";
+      sessionHeadCells[1].innerText = isEnglish ? "Sessions Count" : "عدد الجلسات";
+    }
+
+    const saveBtn = document.getElementById("save-btn");
+    if (saveBtn) {
+      saveBtn.innerText = isEnglish ? "💾 Save Changes" : "💾 حفظ التعديلات";
+    }
+
+    const excelBtn = document.getElementById("excel-btn");
+    if (excelBtn) {
+      excelBtn.href = isEnglish
+        ? "{% url 'export_next_schedule_en' %}"
+        : "{% url 'export_next_schedule' %}";  
+      excelBtn.innerText = isEnglish ? "⬇️ Download Excel" : "⬇️ تحميل كـ Excel";   
+    }
+  });
+</script>
+{% endblock %}

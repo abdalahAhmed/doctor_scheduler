@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}إضافة سجل حضور{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">إضافة سجل حضور جديد</h2>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-4">
+      <label for="date" class="form-label">التاريخ</label>
+      <input type="date" class="form-control" id="date" name="date" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">حدد الأطباء الحاضرين:</label>
+      <div class="row row-cols-1 row-cols-md-2 g-3">
+        {% for doctor in doctors %}
+        <div class="col">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="doctor_{{ doctor.id }}" id="doctor_{{ doctor.id }}">
+            <label class="form-check-label" for="doctor_{{ doctor.id }}">{{ doctor.name }}</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a href="{% url 'attendance_list' %}" class="btn btn-secondary">إلغاء</a>
+  </form>
+</div>
+{% endblock %}

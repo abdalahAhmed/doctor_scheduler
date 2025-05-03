@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}مناوبات الأسبوع القادم{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">جدول مناوبات الأسبوع القادم</h2>
+
+  <a href="{% url 'generate_schedule' %}" class="btn btn-primary mb-4">🔁 توليد الجدول تلقائياً</a>
+
+  <table class="table table-bordered text-center">
+    <thead class="table-light">
+      <tr>
+        <th>اليوم</th>
+        <th>السيشن</th>
+        <th>العيادة</th>
+        <th>الطبيب</th>
+        <th>نوع التغطية</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in schedule_entries %}
+      <tr>
+        <td>{{ entry.day }}</td>
+        <td>{{ entry.session }}</td>
+        <td>{{ entry.clinic.name if entry.clinic }}</td>
+        <td>{{ entry.doctor.name }}</td>
+        <td>
+          {% if entry.is_special %}
+            <span class="badge bg-info">خاصة</span>
+          {% elif entry.is_coverage %}
+            <span class="badge bg-warning text-dark">تغطية</span>
+          {% else %}
+            <span class="badge bg-primary">عادية</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">لم يتم إنشاء جدول الأسبوع القادم بعد.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

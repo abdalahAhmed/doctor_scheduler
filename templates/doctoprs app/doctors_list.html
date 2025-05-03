@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}قائمة الأطباء{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">إدارة الأطباء</h2>
+
+  <!-- 🔍 فلتر البحث -->
+  <form method="get" class="mb-3 d-flex">
+    <input type="text" name="q" class="form-control me-2" placeholder="ابحث باسم أو تخصص..." value="{{ request.GET.q }}">
+    <button class="btn btn-outline-primary" type="submit">بحث</button>
+  </form>
+
+  <a href="{% url 'add_doctor' %}" class="btn btn-success mb-3">إضافة طبيب جديد</a>
+
+  <table class="table table-bordered table-hover text-center">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>الاسم</th>
+        <th>التخصص</th>
+        <th>العيادات المفضلة</th>
+        <th>الأيام المفضلة</th>
+        <th>الحد الأقصى للجلسات</th>
+        <th>المناوبة</th>
+        <th>مدرب؟</th>
+        <th>تحكم</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for doctor in doctors %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ doctor.name }}</td>
+        <td>{{ doctor.specialty }}</td>
+        <td>{{ doctor.preferred_clinics|join:", " }}</td>
+        <td>{{ doctor.preferred_days|join:", " }}</td>
+        <td>{{ doctor.max_sessions }}</td>
+        <td>{{ doctor.shift_preference|join:", " }}</td>
+        <td>{% if doctor.has_training %}✔{% else %}—{% endif %}</td>
+        <td>
+          <a href="{% url 'edit_doctor' doctor.id %}" class="btn btn-sm btn-primary">تعديل</a>
+          <a href="{% url 'delete_doctor' doctor.id %}" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟');">حذف</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9">لا يوجد نتائج.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

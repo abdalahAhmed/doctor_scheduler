@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}لوحة التحكم{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: row;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #0d6efd;
+            color: white;
+            min-height: 100vh;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 12px 20px;
+            transition: background 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #0b5ed7;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <h4 class="p-4">نظام جدولة الأطباء</h4>
+    <a href="{% url 'doctor_dashboard' %}">لوحة التحكم</a>
+    <a href="{% url 'doctors_list' %}">الأطباء</a>
+    <a href="{% url 'clinics_list' %}">العيادات</a>
+    <a href="{% url 'vacations_list' %}">الإجازات</a>
+    <a href="{% url 'attendance_list' %}">الحضور والغياب</a>
+    <a href="{% url 'active_locations' %}">العيادات المفعّلة</a> <!-- ✅ الجديد -->
+    <a href="{% url 'current_schedule' %}">المناوبات الحالية</a>
+    <a href="{% url 'next_schedule' %}">جدول الأسبوع القادم</a>
+    
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    {% block content %}
+    <!-- محتوى الصفحات الفرعية -->
+    {% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

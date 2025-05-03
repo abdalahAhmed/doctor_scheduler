@@ -1,0 +1,111 @@
+{% extends "base_landing.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/landing.css' %}" />
+
+<!-- زر الرجوع لأعلى -->
+<button
+  id="backToTopBtn"
+  class="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-full shadow-lg opacity-0 invisible transition-all duration-300 transform translate-y-4 hover:shadow-xl focus:outline-none"
+  aria-label="Back to top"
+  onclick="scrollToTop()"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+  </svg>
+</button>
+
+<main class="bg-indigo-50 text-gray-900">
+  <!-- Hero Section Without Image -->
+  <section class="overflow-hidden bg-indigo-50">
+    <div class="flex flex-col items-center justify-center py-32 text-center px-6">
+      <h1 class="flex flex-col gap-2 text-4xl font-extrabold text-indigo-900 sm:text-6xl xl:text-7xl box">
+        <span>نظام جدولة الأطباء</span>
+        <span class="text-nowrap text-indigo-600">تنظيم المناوبات والإجازات بسهولة</span>
+      </h1>
+      <p class="mt-8 text-xl text-indigo-800 sm:text-2xl box">
+        منصة ذكية لإدارة الجداول، الحضور، العيادات، والإجازات بضغطة زر.
+      </p>
+      <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a
+          href="#about"
+          class="w-full sm:w-auto rounded-full bg-white px-8 py-4 text-lg font-bold text-indigo-600 shadow-md hover:bg-indigo-100 hover:shadow-lg transition duration-300 box"
+        >
+          عن النظام
+        </a>
+        <a
+          href="{% url 'doctor_dashboard' %}"
+          class="w-full sm:w-auto rounded-full bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-md hover:bg-indigo-700 hover:shadow-lg transition duration-300 box"
+        >
+          ابدأ الآن
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- باقي الأقسام كما هي -->
+  <!-- About Section -->
+  <section id="about" class="py-20 bg-indigo-50">
+    <div class="container mx-auto px-4">
+      <h2 class="text-4xl font-bold text-center text-indigo-900 mb-12 box">عن النظام</h2>
+      <p class="text-xl text-indigo-800 text-center max-w-3xl mx-auto mb-16 box">
+        صمِّم هذا النظام ليساعدك على جدولة الأطباء بكفاءة عالية. من خلاله يمكنك إدارة الحضور والغياب، الإجازات، العيادات، والمناوبات بكل سهولة.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div class="space-y-8">
+          <div class="flex items-center bg-white p-6 rounded-xl shadow-lg box">
+            <p class="text-lg font-semibold text-indigo-900">
+              🗓️ جدولة مرنة للأطباء حسب التخصص والعيادة
+            </p>
+          </div>
+          <div class="flex items-center bg-white p-6 rounded-xl shadow-lg box">
+            <p class="text-lg font-semibold text-indigo-900">
+              ✅ تتبع الحضور والغياب والإجازات
+            </p>
+          </div>
+          <div class="flex items-center bg-white p-6 rounded-xl shadow-lg box">
+            <p class="text-lg font-semibold text-indigo-900">
+              📊 تقرير أسبوعي شامل للمناوبات
+            </p>
+          </div>
+          <div class="flex items-center bg-white p-6 rounded-xl shadow-lg box">
+            <p class="text-lg font-semibold text-indigo-900">
+              🤖 نظام ذكي يراعي تفضيلات كل طبيب تلقائيًا
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Section -->
+  <section class="py-20 bg-indigo-50" id="services">
+    <div class="container mx-auto px-4">
+      <h2 class="text-4xl font-bold text-center text-indigo-900 mb-16 box">خدمات النظام</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="bg-white rounded-xl p-8 text-center shadow-lg box hover:shadow-2xl hover:-translate-y-2">
+          <div class="mb-6 text-5xl text-indigo-600">📅</div>
+          <h3 class="text-2xl font-semibold text-indigo-900 mb-2">جدولة أسبوعية</h3>
+          <p class="text-indigo-700">توليد تلقائي لجدول الأسبوع بناءً على الشروط.</p>
+        </div>
+        <div class="bg-white rounded-xl p-8 text-center shadow-lg box hover:shadow-2xl hover:-translate-y-2">
+          <div class="mb-6 text-5xl text-indigo-600">🏥</div>
+          <h3 class="text-2xl font-semibold text-indigo-900 mb-2">إدارة العيادات</h3>
+          <p class="text-indigo-700">إضافة وتعديل أيام عمل العيادات.</p>
+        </div>
+        <div class="bg-white rounded-xl p-8 text-center shadow-lg box hover:shadow-2xl hover:-translate-y-2">
+          <div class="mb-6 text-5xl text-indigo-600">👨‍⚕️</div>
+          <h3 class="text-2xl font-semibold text-indigo-900 mb-2">قاعدة بيانات الأطباء</h3>
+          <p class="text-indigo-700">إضافة التخصص، الشيفت، العيادات المفضلة، وغيرها.</p>
+        </div>
+        <div class="bg-white rounded-xl p-8 text-center shadow-lg box hover:shadow-2xl hover:-translate-y-2">
+          <div class="mb-6 text-5xl text-indigo-600">📈</div>
+          <h3 class="text-2xl font-semibold text-indigo-900 mb-2">تقييم الأداء</h3>
+          <p class="text-indigo-700">قريبًا: نظام تحليل وتقييم المناوبات الفعلية.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}إضافة إجازة{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">إضافة إجازة جديدة</h2>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label for="doctor" class="form-label">الطبيب</label>
+      <select class="form-select" id="doctor" name="doctor" required>
+        <option value="" disabled selected>اختر الطبيب</option>
+        {% for doctor in doctors %}
+        <option value="{{ doctor.id }}">{{ doctor.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="start_date" class="form-label">تاريخ بدء الإجازة</label>
+      <input type="date" class="form-control" id="start_date" name="start_date" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="end_date" class="form-label">تاريخ نهاية الإجازة</label>
+      <input type="date" class="form-control" id="end_date" name="end_date" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a href="{% url 'vacations_list' %}" class="btn btn-secondary">إلغاء</a>
+  </form>
+</div>
+{% endblock %}

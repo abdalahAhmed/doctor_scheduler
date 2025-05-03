@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}العيادات{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">إدارة العيادات</h2>
+
+  <!-- 🔍 فلترة باسم العيادة -->
+  <form method="get" class="mb-3 d-flex">
+    <input type="text" name="q" class="form-control me-2" placeholder="ابحث باسم العيادة..." value="{{ request.GET.q }}">
+    <button class="btn btn-outline-primary" type="submit">بحث</button>
+  </form>
+
+  <a href="{% url 'add_clinic' %}" class="btn btn-success mb-3">إضافة عيادة</a>
+
+  <table class="table table-bordered text-center">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>الاسم</th>
+        <th>أيام العمل</th>
+        <th>تحكم</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for clinic in clinics %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ clinic.name }}</td>
+        <td>{{ clinic.days_available|join:", " }}</td>
+        <td>
+          <a href="{% url 'edit_clinic' clinic.id %}" class="btn btn-sm btn-primary">تعديل</a>
+          <a href="{% url 'delete_clinic' clinic.id %}" class="btn btn-sm btn-danger"
+             onclick="return confirm('هل أنت متأكد من حذف العيادة؟');">حذف</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">لا توجد عيادات</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

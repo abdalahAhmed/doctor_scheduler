@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}تعديل الإجازة{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">تعديل إجازة الطبيب: {{ vacation.doctor.name }}</h2>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label">اسم الطبيب</label>
+      <input type="text" class="form-control" value="{{ vacation.doctor.name }}" disabled>
+    </div>
+
+    <div class="mb-3">
+      <label for="start_date" class="form-label">تاريخ بدء الإجازة</label>
+      <input type="date" class="form-control" id="start_date" name="start_date" value="{{ vacation.start_date|date:'Y-m-d' }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="end_date" class="form-label">تاريخ نهاية الإجازة</label>
+      <input type="date" class="form-control" id="end_date" name="end_date" value="{{ vacation.end_date|date:'Y-m-d' }}" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">تحديث</button>
+    <a href="{% url 'vacations_list' %}" class="btn btn-secondary">إلغاء</a>
+  </form>
+</div>
+{% endblock %}

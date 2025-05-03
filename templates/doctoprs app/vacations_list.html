@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}قائمة الإجازات{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">إدارة الإجازات</h2>
+  <a href="{% url 'add_vacation' %}" class="btn btn-success mb-3">إضافة إجازة</a>
+
+  <table class="table table-bordered text-center">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>اسم الطبيب</th>
+        <th>تاريخ البدء</th>
+        <th>تاريخ النهاية</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for vacation in vacations %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ vacation.doctor.name }}</td>
+        <td>{{ vacation.start_date }}</td>
+        <td>{{ vacation.end_date }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">لا توجد إجازات حالياً.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

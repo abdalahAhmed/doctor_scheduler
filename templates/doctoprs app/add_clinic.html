@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}إضافة عيادة جديدة{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">إضافة عيادة</h2>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label for="name" class="form-label">اسم العيادة</label>
+      <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">الأيام المتاحة</label>
+      <div class="form-check">
+        {% for day in work_days %}
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" name="days_available" id="day_{{ day }}" value="{{ day }}">
+          <label class="form-check-label" for="day_{{ day }}">{{ day }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a href="{% url 'clinics_list' %}" class="btn btn-secondary">إلغاء</a>
+  </form>
+</div>
+{% endblock %}

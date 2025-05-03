@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}جدول المناوبات - الأسبوع الحالي{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="text-center mb-4 fw-bold" id="page-title">جدول المناوبات - الأسبوع الحالي</h2>
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <a id="excel-link" href="{% url 'export_current_schedule' %}" class="btn btn-primary">⬇️ تحميل كـ Excel</a>
+    <button id="toggle-language" class="btn btn-secondary">🌐 English / عربي</button>
+  </div>
+
+  {% if week_start_date %}
+    <p id="week-start">بداية الأسبوع: {{ week_start_date }}</p>
+    <div class="table-responsive">
+      <table class="table table-bordered text-center align-middle" id="schedule-table">
+        <thead class="table-dark">
+          <tr id="table-head">
+            <th rowspan="2">اليوم</th>
+            <th rowspan="2">الفترة</th>
+            {% for col in columns %}
+              {% if "نهاري" in col %}
+                <th>{{ col }}</th>
+              {% endif %}
+            {% endfor %}
+            {% for col in columns %}
+              {% if "مسائي" in col %}
+                <th>{{ col }}</th>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for day in days %}
+            {% for period in "الأولى,الثانية"|split:"," %}
+              <tr>
+                {% if forloop.first %}
+                  <td class="fw-bold align-middle" rowspan="2">{{ day }}</td>
+                {% endif %}
+                <td class="fw-semibold">{{ period }}</td>
+                {% for col in columns %}
+                  {% if "نهاري" in col %}
+                    <td>{{ schedule_map|get_item:day|get_item:col|get_item:period|safe|default:"—" }}</td>
+                  {% endif %}
+                {% endfor %}
+                {% for col in columns %}
+                  {% if "مسائي" in col %}
+                    <td>{{ schedule_map|get_item:day|get_item:col|get_item:period|safe|default:"—" }}</td>
+                  {% endif %}
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-center mt-5 mb-4 fw-bold" id="sessions-title">عدد الجلسات لكل طبيب</h3>
+    <div class="table-responsive">
+      <table class="table table-bordered text-center align-middle">
+        <thead class="table-dark">
+          <tr id="session-head">
+            <th>اسم الطبيب</th>
+            <th>عدد الجلسات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doctor_name, session_count in doctor_sessions.items %}
+            <tr>
+              <td>{{ doctor_name }}</td>
+              <td>{{ session_count }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="2">لا يوجد أطباء لديهم جلسات هذا الأسبوع</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-center">لا يوجد جدول للأسبوع الحالي.</p>
+  {% endif %}
+</div>
+
+<style>
+  .doctor-role {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  .رئيس_القسم { background-color: #444; color: white; }
+  .نائب_رئيس_القسم { background-color: #007bff; color: white; }
+  .أخصائي_أول { background-color: #6a1b9a; color: white; }
+  .استشاري { background-color: #dc3545; color: white; }
+  .أخصائي_نساء { background-color: #f7c6d4; color: black; }
+  .أخصائي_رجال { background-color: #28a745; color: white; }
+  .طبيب_مقيم { background-color: #17a2b8; color: white; }
+  .طبيب_متدرب { background-color: #cfa4ff; color: black; }
+</style>
+
+<script>
+  let isEnglish = false;
+
+  const dayMap = {
+    "الأحد": "Sunday", "الاثنين": "Monday", "الثلاثاء": "Tuesday", "الأربعاء": "Wednesday", "الخميس": "Thursday",
+    "Sunday": "الأحد", "Monday": "الاثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", "Thursday": "الخميس"
+  };
+
+  const periodMap = {
+    "الأولى": "First", "الثانية": "Second",
+    "First": "الأولى", "Second": "الثانية"
+  };
+
+  const shiftMap = {
+    "نهاري": "Morning", "مسائي": "Evening",
+    "Morning": "نهاري", "Evening": "مسائي"
+  };
+
+  document.getElementById("toggle-language").addEventListener("click", () => {
+    isEnglish = !isEnglish;
+
+    const tableWrapper = document.querySelector(".table-responsive");
+    const table = document.getElementById("schedule-table");
+
+    if (isEnglish) {
+      tableWrapper.setAttribute("dir", "ltr");
+    } else {
+      tableWrapper.setAttribute("dir", "rtl");
+    }
+
+    // تغيير عناوين الجدول
+    document.querySelectorAll("#schedule-table thead th").forEach((th, index) => {
+      if (index === 0) {
+        th.innerText = isEnglish ? "Day" : "اليوم";
+      } else if (index === 1) {
+        th.innerText = isEnglish ? "Period" : "الفترة";
+      } else {
+        let text = th.innerText.trim();
+        Object.keys(shiftMap).forEach(key => {
+          if (text.includes(key)) {
+            th.innerText = text.replace(key, shiftMap[key]);
+          }
+        });
+      }
+    });
+
+    // تغيير كل خلايا Body (مش بس أول عمود وتاني عمود)
+    document.querySelectorAll("#schedule-table tbody td").forEach(cell => {
+      const text = cell.innerText.trim();
+      
+      // لو الخلية فيها يوم
+      if (dayMap[text]) {
+        cell.innerText = isEnglish ? dayMap[text] : Object.keys(dayMap).find(key => dayMap[key] === text) || text;
+      }
+      
+      // لو الخلية فيها فترة (الأولى أو الثانية)
+      else if (periodMap[text]) {
+        cell.innerText = isEnglish ? periodMap[text] : Object.keys(periodMap).find(key => periodMap[key] === text) || text;
+      }
+    });
+
+    // تغيير عنوان الجدول
+    const title = document.querySelector("h2");
+    if (title) {
+      title.innerText = isEnglish ? "Schedule - Current Week" : "جدول المناوبات - الأسبوع الحالي";
+    }
+
+    // تغيير عناوين جدول الجلسات
+    const sessionHeadCells = document.querySelectorAll("#session-head th");
+    if (sessionHeadCells.length >= 2) {
+      sessionHeadCells[0].innerText = isEnglish ? "Doctor Name" : "اسم الطبيب";
+      sessionHeadCells[1].innerText = isEnglish ? "Sessions Count" : "عدد الجلسات";
+    }
+
+    // تغيير رابط الإكسل
+    const excelLink = document.getElementById("excel-link");
+    if (excelLink) {
+      excelLink.href = isEnglish ? "{% url 'export_current_schedule_en' %}" : "{% url 'export_current_schedule' %}";
+    }
+  });
+</script>
+{% endblock %}

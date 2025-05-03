@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}إضافة طبيب{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-4 text-center fw-bold">نموذج إضافة طبيب</h2>
+  <form method="post">
+    {% csrf_token %}
+
+    <!-- الاسم -->
+    <div class="mb-3">
+      <label class="form-label">اسم الطبيب</label>
+      <input type="text" name="name" class="form-control" required>
+    </div>
+
+    <!-- الرتبة -->
+    <div class="mb-3">
+      <label class="form-label">الرتبة</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for role in roles %}
+          <button type="button" class="btn btn-outline-primary" onclick="selectRole('{{ role }}', this)">{{ role }}</button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="specialty" id="specialtyInput">
+    </div>
+
+    <!-- الحد الأقصى للجلسات -->
+    <div class="mb-3">
+      <label class="form-label">الحد الأقصى للجلسات</label>
+      <input type="number" name="max_sessions" class="form-control" required>
+    </div>
+
+    <!-- تفضيلات العيادات -->
+    <div class="mb-3">
+      <label class="form-label">تفضيلات العيادات</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for clinic in clinic_names %}
+          <button type="button" class="btn btn-outline-secondary" onclick="toggleSelection(this, 'preferred_clinics')">{{ clinic }}</button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="preferred_clinics" id="preferred_clinicsInput">
+    </div>
+
+    <!-- الأيام المفضلة -->
+    <div class="mb-3">
+      <label class="form-label">الأيام المفضلة (اختار اليوم ثم الفترة)</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for day in work_days %}
+          <div class="day-block">
+            <button type="button" class="btn btn-outline-success" onclick="toggleDay('{{ day }}', 'preferred')">{{ day }}</button>
+            <div id="preferred-{{ day }}" class="mt-2" style="display: none;">
+              <button type="button" class="btn btn-outline-success mb-1" onclick="togglePreferredDay('{{ day }}', 'نهاري', this)">نهاري</button>
+              <button type="button" class="btn btn-outline-success" onclick="togglePreferredDay('{{ day }}', 'ليلي', this)">ليلي</button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="preferred_days" id="preferred_daysInput">
+    </div>
+
+    <!-- الأيام غير المتاحة -->
+    <div class="mb-3">
+      <label class="form-label">الأيام غير المتاحة (اختار اليوم ثم الفترة)</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for day in work_days %}
+          <div class="day-block">
+            <button type="button" class="btn btn-outline-danger" onclick="toggleDay('{{ day }}', 'unavailable')">{{ day }}</button>
+            <div id="unavailable-{{ day }}" class="mt-2" style="display: none;">
+              <button type="button" class="btn btn-outline-danger mb-1" onclick="toggleUnavailableDay('{{ day }}', 'نهاري', this)">نهاري</button>
+              <button type="button" class="btn btn-outline-danger" onclick="toggleUnavailableDay('{{ day }}', 'ليلي', this)">ليلي</button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="unavailable_days" id="unavailable_daysInput">
+    </div>
+
+    <!-- تفضيلات المناوبة العامة -->
+    <div class="mb-3">
+      <label class="form-label">تفضيلات المناوبة (بشكل عام)</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for shift in shift_types %}
+          <button type="button" class="btn btn-outline-dark" onclick="toggleSelection(this, 'shift_preference')">{{ shift }}</button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="shift_preference" id="shift_preferenceInput">
+    </div>
+
+    <!-- مدرب؟ -->
+    <div class="form-check mb-4">
+      <input class="form-check-input" type="checkbox" name="has_training" id="has_training">
+      <label class="form-check-label" for="has_training">مدرب؟</label>
+    </div>
+
+    <!-- زر الحفظ -->
+    <div class="text-center">
+      <button type="submit" class="btn btn-primary px-5">💾 حفظ</button>
+      <a href="{% url 'doctors_list' %}" class="btn btn-secondary px-4">إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<!-- JavaScript -->
+<script>
+  let selections = {
+    preferred_clinics: [],
+    preferred_days: [],
+    unavailable_days: [],
+    shift_preference: []
+  };
+
+  function toggleSelection(btn, field) {
+    const value = btn.textContent.trim();
+    const index = selections[field].indexOf(value);
+    if (index === -1) {
+      selections[field].push(value);
+      btn.classList.add("active");
+    } else {
+      selections[field].splice(index, 1);
+      btn.classList.remove("active");
+    }
+    document.getElementById(`${field}Input`).value = selections[field].join(",");
+  }
+
+  function toggleDay(day, type) {
+    const periodsDiv = document.getElementById(`${type}-${day}`);
+    periodsDiv.style.display = periodsDiv.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function togglePreferredDay(day, period, btn) {
+    const value = `${day}-${period}`;
+    const index = selections['preferred_days'].indexOf(value);
+    if (index === -1) {
+      selections['preferred_days'].push(value);
+      btn.classList.add("active");
+    } else {
+      selections['preferred_days'].splice(index, 1);
+      btn.classList.remove("active");
+    }
+    document.getElementById('preferred_daysInput').value = selections['preferred_days'].join(",");
+  }
+
+  function toggleUnavailableDay(day, period, btn) {
+    const value = `${day}-${period}`;
+    const index = selections['unavailable_days'].indexOf(value);
+    if (index === -1) {
+      selections['unavailable_days'].push(value);
+      btn.classList.add("active");
+    } else {
+      selections['unavailable_days'].splice(index, 1);
+      btn.classList.remove("active");
+    }
+    document.getElementById('unavailable_daysInput').value = selections['unavailable_days'].join(",");
+  }
+
+  function selectRole(value, btn) {
+    document.getElementById("specialtyInput").value = value;
+    document.querySelectorAll("button[onclick^='selectRole']").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  }
+</script>
+{% endblock %}

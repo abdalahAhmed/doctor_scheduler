@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم{% endblock %}
+
+{% block content %}
+<h1 class="text-center my-4 text-primary">لوحة تحكم النظام</h1>
+
+<div class="row g-4">
+
+  <!-- كارت الأطباء -->
+  <div class="col-md-4">
+    <div class="card text-center shadow">
+      <div class="card-body">
+        <h5 class="card-title">عدد الأطباء</h5>
+        <p class="display-5 text-primary">{{ doctors.count }}</p>
+        <a href="{% url 'doctors_list' %}" class="btn btn-outline-primary">عرض التفاصيل</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- كارت العيادات -->
+  <div class="col-md-4">
+    <div class="card text-center shadow">
+      <div class="card-body">
+        <h5 class="card-title">عدد العيادات</h5>
+        <p class="display-5 text-primary">{{ clinics.count }}</p>
+        <a href="{% url 'clinics_list' %}" class="btn btn-outline-primary">عرض التفاصيل</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- كارت الإجازات -->
+  <div class="col-md-4">
+    <div class="card text-center shadow">
+      <div class="card-body">
+        <h5 class="card-title">عدد الإجازات</h5>
+        <p class="display-5 text-danger">{{ vacations.count }}</p>
+        <a href="{% url 'vacations_list' %}" class="btn btn-outline-danger">عرض التفاصيل</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- كارت المناوبات الحالية -->
+  <div class="col-md-6">
+    <div class="card text-center shadow">
+      <div class="card-body">
+        <h5 class="card-title">المناوبات الحالية</h5>
+        <p class="display-5 text-success">{{ current_schedule.count }}</p>
+        <a href="{% url 'current_schedule' %}" class="btn btn-outline-success">عرض الجدول</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- كارت الحضور -->
+  <div class="col-md-6">
+    <div class="card text-center shadow">
+      <div class="card-body">
+        <h5 class="card-title">الحضور اليوم</h5>
+        <p class="display-5 text-info">{{ present_count }} / {{ attendance.count }}</p>
+        <a href="{% url 'attendance_list' %}" class="btn btn-outline-info">عرض الحضور</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

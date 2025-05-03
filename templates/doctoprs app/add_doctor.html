@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}إضافة طبيب جديد{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="my-4">إضافة طبيب</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+      <label for="name" class="form-label">اسم الطبيب</label>
+      <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="specialty" class="form-label">التخصص</label>
+      <input type="text" class="form-control" id="specialty" name="specialty">
+    </div>
+
+    <div class="mb-3">
+      <label for="preferred_clinics" class="form-label">العيادات المفضلة (افصل بينها بفاصلة)</label>
+      <input type="text" class="form-control" id="preferred_clinics" name="preferred_clinics">
+    </div>
+
+    <div class="mb-3">
+      <label for="preferred_days" class="form-label">الأيام المفضلة (افصل بينها بفاصلة)</label>
+      <input type="text" class="form-control" id="preferred_days" name="preferred_days">
+    </div>
+
+    <div class="mb-3">
+      <label for="unavailable_days" class="form-label">الأيام غير المتاحة</label>
+      <input type="text" class="form-control" id="unavailable_days" name="unavailable_days">
+    </div>
+
+    <div class="mb-3">
+      <label for="shift_preference" class="form-label">تفضيلات المناوبة (نهاري، ليلي)</label>
+      <input type="text" class="form-control" id="shift_preference" name="shift_preference">
+    </div>
+
+    <div class="mb-3">
+      <label for="max_sessions" class="form-label">الحد الأقصى للجلسات</label>
+      <input type="number" class="form-control" id="max_sessions" name="max_sessions" required>
+    </div>
+
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" name="has_training" id="has_training">
+      <label class="form-check-label" for="has_training">مدرب؟</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a href="{% url 'doctors_list' %}" class="btn btn-secondary">إلغاء</a>
+  </form>
+</div>
+{% endblock %}
