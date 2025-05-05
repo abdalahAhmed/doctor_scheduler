@@ -49,6 +49,7 @@ class DoctorScheduler:
         return self.week_start + timedelta(days=days_map[day])
 
     def _create_entry(self, doctor, day, session, clinic, week_start):
+        print(f"[ASSIGN] {doctor.name} to {clinic.name} on {day} - session {session}")
         ScheduleEntry.objects.create(
             doctor=doctor,
             clinic=clinic,
@@ -67,7 +68,7 @@ class DoctorScheduler:
             return True
         if self.assignments.get((doctor.id, day), 0) >= 2:
             return True
-        if not force_max_sessions and self.doctor_sessions.get(doctor.id, 0) >= doctor.max_sessions:
+        if self.doctor_sessions.get(doctor.id, 0) >= doctor.max_sessions and not force_max_sessions:
             return True
         assigned_sessions = self.assigned_shifts.get((doctor.id, day), [])
         if shift == 'نهاري' and any(s in [1, 2] for s in assigned_sessions):
@@ -79,22 +80,38 @@ class DoctorScheduler:
     def assign_preferred_doctors(self, day, session, clinic, week_start):
         shift = 'نهاري' if session in [1, 2] else 'ليلي'
         sessions = [1, 2] if shift == 'نهاري' else [3, 4]
+
         if (shift == 'نهاري' and session != 1) or (shift == 'ليلي' and session != 3):
             return
 
         doctors_sorted = sorted(self.doctors, key=lambda d: self.doctor_sessions[d.id])
+        print(f"[PREF] Trying {day}, session {session}, clinic {clinic.name}")
+
         for doctor in doctors_sorted:
+            # تخطي الخميس مساء لو اشتغل الأسبوع اللي فات
             if day == 'الخميس' and session == 3 and doctor.id in self.last_week_thursday_evening_doctor_ids:
                 continue
+
+            # لو الدكتور مش مختار اليوم دا كـ preferred
+            if f"{day}-{shift}" not in doctor.preferred_days:
+                continue
+
+            # لو الدكتور مش مختار العيادة ضمن تفضيلاته
+            if clinic.name not in doctor.preferred_clinics:
+                continue
+
+            # لو متعين له عيادة في نفس اليوم خلاص ما تعينوش تاني
+            if self.assignments.get((doctor.id, day), 0) > 0:
+                continue
+
+            # التحقق من الشروط (غياب، عدد الجلسات، نفس الوردية)
             if self._skip_doctor(doctor, day, doctor.max_sessions, shift, force_max_sessions=True):
                 continue
-            if (
-                f"{day}-{shift}" in doctor.preferred_days and
-                clinic.name in doctor.preferred_clinics
-            ):
-                for s in sessions:
-                    self._create_entry(doctor, day, s, clinic, week_start)
-                return
+
+            # ✅ كل الشروط تمام، وزعه على العيادة
+            for s in sessions:
+                self._create_entry(doctor, day, s, clinic, week_start)
+            break  # خلصنا تعيين الدكتور لهذا اليوم
 
     def assign_neutral_doctors(self, day, session, clinic, week_start):
         shift = 'نهاري' if session in [1, 2] else 'ليلي'
@@ -102,9 +119,10 @@ class DoctorScheduler:
         if (shift == 'نهاري' and session != 1) or (shift == 'ليلي' and session != 3):
             return
 
-        # الخطوة 1: محاولة تعيين طبيب محايد لا يخالف شرط الخميس مساء
         fallback_doctors = []
         doctors_sorted = sorted(self.doctors, key=lambda d: self.doctor_sessions[d.id])
+        print(f"[NEUTRAL] Trying {day}, session {session}, clinic {clinic.name}")
+
         for doctor in doctors_sorted:
             if self._skip_doctor(doctor, day, doctor.max_sessions, shift, force_max_sessions=False):
                 continue
@@ -116,13 +134,19 @@ class DoctorScheduler:
                     self._create_entry(doctor, day, s, clinic, week_start)
                 return
 
-        # الخطوة 2: fallback – استخدم دكتور من اللي اشتغل الخميس مساء لو مفيش بديل
         for doctor in fallback_doctors:
+            print(f"[FALLBACK] Assigning {doctor.name} to {clinic.name} on {day} evening")
             for s in sessions:
                 self._create_entry(doctor, day, s, clinic, week_start)
             return
 
-
+        # ✅ EMERGENCY fallback: تخطى كل الشروط ووزع أي حد عشان العيادة متبقاش فاضية
+        for doctor in doctors_sorted:
+            if f"{day}-{shift}" not in doctor.unavailable_days:
+                print(f"[EMERGENCY] Forcing {doctor.name} to {clinic.name} on {day} - session {session}")
+                for s in sessions:
+                    self._create_entry(doctor, day, s, clinic, week_start)
+                return
 
     def generate_next_week_schedule(self, manual=False):
         for day in WORK_DAYS:
@@ -137,7 +161,7 @@ class DoctorScheduler:
                     sessions.append(2)
                 if config.period_3_enabled:
                     sessions.append(3)
-                if config.period_4_enabled and not (day == 'الخميس' and config.period_3_enabled):
+                if config.period_4_enabled:
                     sessions.append(4)
 
                 for session in sessions:
@@ -155,7 +179,7 @@ class DoctorScheduler:
                     sessions.append(2)
                 if config.period_3_enabled:
                     sessions.append(3)
-                if config.period_4_enabled and not (day == 'الخميس' and config.period_3_enabled):
+                if config.period_4_enabled:
                     sessions.append(4)
 
                 for session in sessions:
@@ -165,6 +189,7 @@ class DoctorScheduler:
                         day=day,
                         session=session
                     ).exists():
+                        print(f"[WARNING] Session not covered: {clinic.name}, {day}, session {session}")
                         self.assign_neutral_doctors(day, session, clinic, self.week_start)
 
         if manual:
@@ -198,4 +223,4 @@ class DoctorScheduler:
         for entry in entries:
             if entry.doctor:
                 counts[entry.doctor.name] += 1
-        return counts
+        return counts   
