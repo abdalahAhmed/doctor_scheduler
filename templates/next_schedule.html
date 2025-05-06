@@ -55,10 +55,8 @@
           <tbody>
             {% for day in days %}
               {% for period in "الأولى,الثانية"|split:"," %}
-                <tr>
-                  {% if forloop.first %}
-                    <td class="fw-bold align-middle" rowspan="2">{{ day }}</td>
-                  {% endif %}
+                <tr data-day="{{ day }}">
+                  <td class="fw-bold align-middle">{{ day }}</td>
                   <td class="fw-bold">{{ period }}</td>
 
                   {% for col in columns %}
@@ -82,6 +80,10 @@
         <button type="submit" class="btn btn-primary" id="save-btn">💾 حفظ التعديلات</button>
       </div>
     </form>
+
+
+  
+
 
     <h3 class="text-center mt-5 mb-4 fw-bold" id="sessions-title">عدد الجلسات لكل طبيب</h3>
     <div class="table-responsive">
@@ -118,6 +120,8 @@
     border-radius: 6px;
     display: inline-block;
   }
+
+  /* ألوان حسب الرتبة */
   .رئيس_القسم { background-color: #444; color: white; }
   .نائب_رئيس_القسم { background-color: #007bff; color: white; }
   .أخصائي_أول { background-color: #6a1b9a; color: white; }
@@ -126,142 +130,185 @@
   .أخصائي_رجال { background-color: #28a745; color: white; }
   .طبيب_مقيم { background-color: #17a2b8; color: white; }
   .طبيب_متدرب { background-color: #cfa4ff; color: black; }
+
+  /* ✅ تحسين مظهر التعديل */
+  select.form-select-sm {
+    background-color: #fff8e1;
+    border: 2px solid #ffc107;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+
+  button.btn-danger.ms-2 {
+    padding: 2px 6px;
+    font-size: 0.85rem;
+    background-color: #ff5c5c;
+    border: none;
+    border-radius: 4px;
+  }
+
+  td select:focus {
+    outline: none;
+    border-color: #ff9800;
+    box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.5);
+  }
 </style>
 
+
 <script>
-  const doctorList = {{ all_doctors|safe }};
-  let isEnglish = false;
+  document.addEventListener("DOMContentLoaded", function () {
+    const doctorList = {{ all_doctors|safe }} || [];
+    let isEnglish = false;
 
-  document.getElementById("edit-toggle").addEventListener("click", () => {
-    let currentDay = null;
-    document.querySelectorAll("#schedule-table tbody tr").forEach((row) => {
-      const cells = row.querySelectorAll("td");
-      const firstCellText = cells[0]?.innerText?.trim();
-      const secondCellText = cells[1]?.innerText?.trim();
+    const editToggle = document.getElementById("edit-toggle");
+    if (editToggle) {
+      editToggle.addEventListener("click", () => {
+        const rows = document.querySelectorAll("#schedule-table tbody tr");
+        let previousDay = null;
 
-      if (cells.length > {{ columns|length }} + 1) {
-        currentDay = firstCellText;
-        var period = secondCellText;
-        var startIndex = 2;
-      } else {
-        var period = firstCellText;
-        var startIndex = 1;
+        rows.forEach((row) => {
+          const cells = row.querySelectorAll("td");
+          if (cells.length < 2) return;
+
+          // ✅ نقرأ اليوم من خاصية data-day أو نستخدم اليوم السابق
+          let currentDay = row.getAttribute("data-day")?.trim();
+          if (!currentDay && previousDay) {
+            currentDay = previousDay;
+          }
+          if (currentDay) previousDay = currentDay;
+
+          const period = cells[1]?.innerText?.trim() || '';
+          if (!currentDay || !period) return;
+
+          // استبدال الخلايا بقوائم منسدلة
+          cells.forEach((cell, i) => {
+            if (i < 2) return;
+
+            const header = document.querySelector(`#schedule-table thead th:nth-child(${i + 1})`);
+            if (!header) return;
+
+            const clinicShift = header.innerText.trim();
+            if (!clinicShift || clinicShift === "اليوم" || clinicShift === "الفترة") return;
+
+            const span = cell.querySelector("span");
+            const currentValue = span ? span.textContent.trim() : cell.textContent.trim();
+
+            const select = document.createElement("select");
+            select.classList.add("form-select", "form-select-sm");
+            select.name = `assignment__${currentDay}__${clinicShift}__${period}`;
+
+            const hiddenOriginal = document.createElement("input");
+            hiddenOriginal.type = "hidden";
+            hiddenOriginal.name = `assignment__${currentDay}__${clinicShift}__${period}__original`;
+            hiddenOriginal.value = currentValue;
+
+            const defaultOption = document.createElement("option");
+            defaultOption.value = "";
+            defaultOption.text = "اختر طبيبًا";
+            select.appendChild(defaultOption);
+
+            doctorList.forEach((doc) => {
+              const option = document.createElement("option");
+              option.value = doc;
+              option.text = doc;
+              if (doc === currentValue) option.selected = true;
+              select.appendChild(option);
+            });
+
+            const removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.textContent = "🗑️";
+            removeBtn.classList.add("btn", "btn-sm", "btn-danger", "ms-2");
+            removeBtn.onclick = () => { select.value = ""; };
+
+            cell.innerHTML = "";
+            cell.appendChild(select);
+            cell.appendChild(removeBtn);
+            cell.appendChild(hiddenOriginal);
+          });
+        });
+      });
+    }
+
+    // ✅ الجزء الخاص بتبديل اللغة كما هو
+    const dayMap = {
+      "الأحد": "Sunday", "الاثنين": "Monday", "الثلاثاء": "Tuesday", "الأربعاء": "Wednesday", "الخميس": "Thursday",
+      "Sunday": "الأحد", "Monday": "الاثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", "Thursday": "الخميس"
+    };
+
+    const periodMap = {
+      "الأولى": "First", "الثانية": "Second",
+      "First": "الأولى", "Second": "الثانية"
+    };
+
+    const shiftMap = {
+      "نهاري": "Morning", "مسائي": "Evening",
+      "Morning": "نهاري", "Evening": "مسائي"
+    };
+
+    document.getElementById("toggle-language").addEventListener("click", () => {
+      isEnglish = !isEnglish;
+
+      const tableWrapper = document.querySelector(".table-responsive");
+      if (tableWrapper) {
+        tableWrapper.setAttribute("dir", isEnglish ? "ltr" : "rtl");
       }
 
-      row.querySelectorAll(`td:nth-child(n+${startIndex + 1})`).forEach((cell, colIndex) => {
-        const currentText = cell.innerText.trim();
-        const header = document.querySelector(`#schedule-table thead tr th:nth-child(${colIndex + startIndex + 1})`);
-        const clinicShift = header?.innerText?.trim();
-
-        if (currentDay && period && clinicShift) {
-          const select = document.createElement("select");
-          select.classList.add("form-select", "form-select-sm");
-          select.name = `assignment__${currentDay}__${clinicShift}__${period}`;
-
-          const defaultOption = document.createElement("option");
-          defaultOption.value = "";
-          defaultOption.text = "اختر طبيبًا";
-          select.appendChild(defaultOption);
-
-          doctorList.forEach((doc) => {
-            const option = document.createElement("option");
-            option.value = doc;
-            option.text = doc;
-            if (doc === currentText) option.selected = true;
-            select.appendChild(option);
+      document.querySelectorAll("#schedule-table thead th").forEach((th, index) => {
+        let text = th.innerText.trim();
+        if (index === 0) {
+          th.innerText = isEnglish ? "Day" : "اليوم";
+        } else if (index === 1) {
+          th.innerText = isEnglish ? "Period" : "الفترة";
+        } else {
+          Object.keys(shiftMap).forEach(key => {
+            if (text.includes(key)) {
+              th.innerText = text.replace(key, shiftMap[key]);
+            }
           });
-
-          const removeBtn = document.createElement("button");
-          removeBtn.type = "button";
-          removeBtn.textContent = "🗑️";
-          removeBtn.classList.add("btn", "btn-sm", "btn-danger", "ms-2");
-          removeBtn.onclick = () => {
-            select.value = "";
-          };
-
-          cell.innerHTML = "";
-          cell.appendChild(select);
-          cell.appendChild(removeBtn);
         }
       });
-    });
-  });
 
-  const dayMap = {
-    "الأحد": "Sunday", "الاثنين": "Monday", "الثلاثاء": "Tuesday", "الأربعاء": "Wednesday", "الخميس": "Thursday",
-    "Sunday": "الأحد", "Monday": "الاثنين", "Tuesday": "الثلاثاء", "Wednesday": "الأربعاء", "Thursday": "الخميس"
-  };
+      document.querySelectorAll("#schedule-table tbody td").forEach(cell => {
+        const text = cell.innerText.trim();
+        if (dayMap[text]) {
+          cell.innerText = isEnglish ? dayMap[text] : Object.keys(dayMap).find(key => dayMap[key] === text) || text;
+        } else if (periodMap[text]) {
+          cell.innerText = isEnglish ? periodMap[text] : Object.keys(periodMap).find(key => periodMap[key] === text) || text;
+        }
+      });
 
-  const periodMap = {
-    "الأولى": "First", "الثانية": "Second",
-    "First": "الأولى", "Second": "الثانية"
-  };
+      const pageTitle = document.getElementById("page-title");
+      if (pageTitle) {
+        pageTitle.innerText = isEnglish ? "Schedule - Next Week" : "جدول المناوبات - الأسبوع القادم";
+      }
 
-  const shiftMap = {
-    "نهاري": "Morning", "مسائي": "Evening",
-    "Morning": "نهاري", "Evening": "مسائي"
-  };
+      const weekStart = document.getElementById("week-start");
+      if (weekStart) {
+        weekStart.innerText = (isEnglish ? "Week Start: " : "بداية الأسبوع: ") + "{{ week_start_date }}";
+      }
 
-  document.getElementById("toggle-language").addEventListener("click", () => {
-    isEnglish = !isEnglish;
+      const sessionHeadCells = document.querySelectorAll("#session-head th");
+      if (sessionHeadCells.length >= 2) {
+        sessionHeadCells[0].innerText = isEnglish ? "Doctor Name" : "اسم الطبيب";
+        sessionHeadCells[1].innerText = isEnglish ? "Sessions Count" : "عدد الجلسات";
+      }
 
-    const tableWrapper = document.querySelector(".table-responsive");
-    if (tableWrapper) {
-      tableWrapper.setAttribute("dir", isEnglish ? "ltr" : "rtl");
-    }
+      const saveBtn = document.getElementById("save-btn");
+      if (saveBtn) {
+        saveBtn.innerText = isEnglish ? "💾 Save Changes" : "💾 حفظ التعديلات";
+      }
 
-    document.querySelectorAll("#schedule-table thead th").forEach((th, index) => {
-      let text = th.innerText.trim();
-      if (index === 0) {
-        th.innerText = isEnglish ? "Day" : "اليوم";
-      } else if (index === 1) {
-        th.innerText = isEnglish ? "Period" : "الفترة";
-      } else {
-        Object.keys(shiftMap).forEach(key => {
-          if (text.includes(key)) {
-            th.innerText = text.replace(key, shiftMap[key]);
-          }
-        });
+      const excelBtn = document.getElementById("excel-btn");
+      if (excelBtn) {
+        excelBtn.href = isEnglish
+          ? "{% url 'export_next_schedule_en' %}"
+          : "{% url 'export_next_schedule' %}";
+        excelBtn.innerText = isEnglish ? "⬇️ Download Excel" : "⬇️ تحميل كـ Excel";
       }
     });
-
-    document.querySelectorAll("#schedule-table tbody td").forEach(cell => {
-      const text = cell.innerText.trim();
-      if (dayMap[text]) {
-        cell.innerText = isEnglish ? dayMap[text] : Object.keys(dayMap).find(key => dayMap[key] === text) || text;
-      } else if (periodMap[text]) {
-        cell.innerText = isEnglish ? periodMap[text] : Object.keys(periodMap).find(key => periodMap[key] === text) || text;
-      }
-    });
-
-    const pageTitle = document.getElementById("page-title");
-    if (pageTitle) {
-      pageTitle.innerText = isEnglish ? "Schedule - Next Week" : "جدول المناوبات - الأسبوع القادم";
-    }
-
-    const weekStart = document.getElementById("week-start");
-    if (weekStart) {
-      weekStart.innerText = (isEnglish ? "Week Start: " : "بداية الأسبوع: ") + "{{ week_start_date }}";
-    }
-
-    const sessionHeadCells = document.querySelectorAll("#session-head th");
-    if (sessionHeadCells.length >= 2) {
-      sessionHeadCells[0].innerText = isEnglish ? "Doctor Name" : "اسم الطبيب";
-      sessionHeadCells[1].innerText = isEnglish ? "Sessions Count" : "عدد الجلسات";
-    }
-
-    const saveBtn = document.getElementById("save-btn");
-    if (saveBtn) {
-      saveBtn.innerText = isEnglish ? "💾 Save Changes" : "💾 حفظ التعديلات";
-    }
-
-    const excelBtn = document.getElementById("excel-btn");
-    if (excelBtn) {
-      excelBtn.href = isEnglish
-        ? "{% url 'export_next_schedule_en' %}"
-        : "{% url 'export_next_schedule' %}";  
-      excelBtn.innerText = isEnglish ? "⬇️ Download Excel" : "⬇️ تحميل كـ Excel";   
-    }
   });
 </script>
+
+
 {% endblock %}

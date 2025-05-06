@@ -603,50 +603,113 @@ def export_current_schedule_excel(request, lang='ar'):
 
 from django.views.decorators.csrf import csrf_exempt
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from django.shortcuts import redirect
+from .models import Doctor, Clinic, ScheduleEntry
+from datetime import datetime
+
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import redirect
+from django.http import HttpResponse
+from .models import Doctor, Clinic, ScheduleEntry
+from datetime import datetime
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from django.shortcuts import redirect
+from datetime import datetime
+from .models import Clinic, Doctor, ScheduleEntry
+
 @csrf_exempt
 def save_schedule_changes(request):
+    def normalize(val):
+        return val.strip().replace('\u202a', '').replace('\u200f', '').replace('\xa0', '').lower()
+
     if request.method == 'POST':
-        # ✅ تحويل التاريخ من نص إلى كائن تاريخ
         week_start_str = request.POST.get('week_start_date')
         try:
             week_start = datetime.strptime(week_start_str, "%Y-%m-%d").date()
         except ValueError:
-            return HttpResponse("تاريخ غير صالح", status=400)
+            return HttpResponse("❌ تاريخ غير صالح", status=400)
 
-        # ✅ حذف الجدول القديم لنفس الأسبوع
-        ScheduleEntry.objects.filter(week_start_date=week_start).delete()
+        print("🔵 جميع البيانات المرسلة:")
+        for k, v in request.POST.items():
+            print(k, "=>", repr(v))
 
-        # ✅ حفظ الإدخالات الجديدة
-        for key, doctor_name in request.POST.items():
-            if key.startswith("assignment__") and doctor_name.strip():
+        for key, new_value in request.POST.items():
+            if key.startswith("assignment__") and "__original" not in key:
+                original_key = key + "__original"
+                old_value = request.POST.get(original_key, "")
+                new_value = new_value or ""
+
+                if normalize(old_value) == normalize(new_value):
+                    continue
+
+                print("🟡 تعديل فعلي:")
+                print("🔑 المفتاح:", key)
+                print("📥 القديم:", repr(old_value))
+                print("📤 الجديد:", repr(new_value))
+
                 try:
-                    _, day, clinic_shift, period = key.split("__")
-                    clinic_name, shift = clinic_shift.strip().split(" - ")
+                    parts = key.split("__")
+                    if len(parts) != 4:
+                        print("❌ المفتاح غير مكتمل أو غير صحيح:", key)
+                        continue
+
+                    _, day, clinic_shift, period = parts
+                    clinic_parts = clinic_shift.strip().split(" - ")
+                    if len(clinic_parts) != 2:
+                        print("❌ تنسيق العيادة/الدوام غير صحيح:", clinic_shift)
+                        continue
+
+                    clinic_name, shift = clinic_parts
                     session = {
                         ("نهاري", "الأولى"): 1,
                         ("نهاري", "الثانية"): 2,
                         ("مسائي", "الأولى"): 3,
                         ("مسائي", "الثانية"): 4,
-                    }.get((shift, period))
+                    }.get((shift.strip(), period.strip()))
 
-                    doctor = Doctor.objects.filter(name=doctor_name).first()
-                    clinic = Clinic.objects.filter(name=clinic_name).first()
+                    clinic = Clinic.objects.filter(name__iexact=clinic_name.strip()).first()
+                    if not clinic or session is None:
+                        print("❌ عيادة أو جلسة غير صالحة:", clinic_name, session)
+                        continue
 
-                    if doctor and clinic and session:
+                    doctor = Doctor.objects.filter(name__iexact=new_value.strip()).first()
+                    print("📋 هل الطبيب موجود؟", bool(doctor))
+
+                    entry = ScheduleEntry.objects.filter(
+                        day=day,
+                        session=session,
+                        clinic=clinic,
+                        week_start_date=week_start
+                    ).first()
+
+                    if entry:
+                        if doctor:
+                            entry.doctor = doctor
+                            entry.is_manual = True
+                            entry.save()
+                        elif Doctor.objects.filter(name__iexact=old_value.strip()).exists() and not new_value.strip():
+                            entry.delete()
+                    elif doctor:
                         ScheduleEntry.objects.create(
                             doctor=doctor,
                             clinic=clinic,
                             day=day,
                             session=session,
-                            week_start_date=week_start
+                            week_start_date=week_start,
+                            is_manual=True
                         )
                 except Exception as e:
-                    print(f"خطأ في الحفظ: {e}")
+                    print("❌ خطأ أثناء المعالجة:", e)
 
         return redirect('next_schedule')
 
-    return HttpResponse("يجب استخدام POST.")
-    
+    return HttpResponse("❌ يجب استخدام POST.", status=405)
+
+
     
 # ✅ نقل جدول الأسبوع القادم إلى الأسبوع الحالي يدويًا
 def move_week(request):

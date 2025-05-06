@@ -59,6 +59,8 @@ class ScheduleEntry(models.Model):
     is_coverage = models.BooleanField(default=False, verbose_name='تغطية')
     week_start_date = models.DateField(verbose_name='بداية الأسبوع', default=date.today)
     has_conflict = models.BooleanField(default=False, verbose_name='تعارض في الجدول')  # الحقل الجديد
+    is_manual = models.BooleanField(default=False, verbose_name='تم تعديله يدويًا')
+
 
     def __str__(self):
         return f"{self.day} - {self.get_session_display()} - {self.clinic.name}"

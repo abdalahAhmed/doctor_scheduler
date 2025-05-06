@@ -33,7 +33,7 @@ class DoctorScheduler:
         entries = ScheduleEntry.objects.filter(
             week_start_date=self.current_week_start,
             day='الخميس',
-            session__in=[3, 4]  # تشمل جلسات المساء (3 و4)
+            session__in=[3, 4]
         )
         return set(entry.doctor.id for entry in entries if entry.doctor)
 
@@ -60,26 +60,43 @@ class DoctorScheduler:
         self.doctor_sessions[doctor.id] += 1
         self.assigned_shifts[(doctor.id, day)] = self.assigned_shifts.get((doctor.id, day), []) + [session]
 
-    def _skip_doctor(self, doctor, day, max_sessions_limit, shift, force_max_sessions=False):
-        # قيد خاص: منع Dr. Faisal من جلسات المساء يوم الخميس
-        if doctor.name == "Dr. Faisal" and day == 'الخميس' and shift == 'ليلي':
+    def _skip_doctor(self, doctor, day, max_sessions_limit, shift, clinic=None, force_max_sessions=False):
+        # ✅ منع غير المدربين من عيادات التدريب فقط
+        if clinic and clinic.name.strip().lower() in ['trainer', 'or trainer'] and not doctor.has_training:
+            print(f"⛔️ {doctor.name} غير مدرب وتم منعه من العيادة {clinic.name}")
             return True
+
+        # ✅ استثناء خاص: منع Dr. Faisal من جلسات المساء يوم الخميس
+        if doctor.name == "Dr.Faisal" and day == 'الخميس' and shift == 'ليلي':
+            return True
+
+        # التحقق من الأيام غير المتاحة
         if f"{day}-{shift}" in doctor.unavailable_days:
             return True
+
+        # التحقق من الإجازات
         if self.is_doctor_on_vacation(doctor, day):
             return True
+
+        # منع التخصيص أكثر من مرتين في اليوم
         if self.assignments.get((doctor.id, day), 0) >= 2:
             return True
+
+        # منع التجاوز للحد الأقصى للجلسات الأسبوعية إذا لم يتم تجاوز الحد الأقصى
         if not force_max_sessions and self.doctor_sessions.get(doctor.id, 0) >= doctor.max_sessions:
             return True
+
+        # التحقق من الجلسات المخصصة مسبقًا في نفس اليوم
         assigned_sessions = self.assigned_shifts.get((doctor.id, day), [])
         if shift == 'نهاري' and any(s in [1, 2] for s in assigned_sessions):
             return True
         if shift == 'ليلي' and any(s in [3, 4] for s in assigned_sessions):
             return True
-        # قيد: منع الدكتور من الخميس المسائي إذا عمل فيه الأسبوع الماضي
+
+        # منع تخصيص الطبيب الذي عمل مساء الخميس في الأسبوع السابق
         if day == 'الخميس' and shift == 'ليلي' and doctor.id in self.last_week_thursday_evening_doctor_ids:
             return True
+
         return False
 
     def assign_preferred_doctors(self, day, session, clinic, week_start):
@@ -90,7 +107,7 @@ class DoctorScheduler:
 
         doctors_sorted = sorted(self.doctors, key=lambda d: self.doctor_sessions[d.id])
         for doctor in doctors_sorted:
-            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, force_max_sessions=True):
+            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, clinic, force_max_sessions=True):
                 continue
             if (
                 f"{day}-{shift}" in doctor.preferred_days and
@@ -106,29 +123,26 @@ class DoctorScheduler:
         if (shift == 'نهاري' and session != 1) or (shift == 'ليلي' and session != 3):
             return
 
-        # الخطوة 1: محاولة تعيين طبيب محايد
         fallback_doctors = []
         doctors_sorted = sorted(self.doctors, key=lambda d: self.doctor_sessions[d.id])
         for doctor in doctors_sorted:
-            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, force_max_sessions=False):
+            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, clinic):
                 continue
             if f"{day}-{shift}" not in doctor.preferred_days and f"{day}-{shift}" not in doctor.unavailable_days:
                 for s in sessions:
                     self._create_entry(doctor, day, s, clinic, week_start)
                 return
 
-        # الخطوة 2: fallback – استخدم دكتور من اللي اشتغل الخميس مساء لو مفيش بديل
         for doctor in fallback_doctors:
-            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, force_max_sessions=False):
+            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, clinic):
                 continue
             for s in sessions:
                 self._create_entry(doctor, day, s, clinic, week_start)
             return
 
-        # الخطوة 3: Fallback أخير – وزع على أي دكتور حتى لو وصل max_sessions
         doctors_force_sorted = sorted(self.doctors, key=lambda d: self.doctor_sessions[d.id])
         for doctor in doctors_force_sorted:
-            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, force_max_sessions=True):
+            if self._skip_doctor(doctor, day, doctor.max_sessions, shift, clinic, force_max_sessions=True):
                 continue
             if f"{day}-{shift}" not in doctor.unavailable_days:
                 for s in sessions:
